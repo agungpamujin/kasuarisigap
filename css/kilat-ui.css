@@ -1,0 +1,30 @@
+/* =====================================================================
+   KASUARI SIGAP – KILAT v3.0 (lapisan kecepatan & kenyamanan antarmuka)
+   Dipakai aplikasi pasien & dashboard perawat.
+   ===================================================================== */
+/* Kerangka abu-abu (skeleton) menggantikan "Memuat…" */
+.sk{position:relative;overflow:hidden;background:#E9EFF4;border-radius:12px}
+.sk:after{content:"";position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(90deg,transparent,rgba(255,255,255,.65),transparent);animation:skw 1.1s infinite}
+@keyframes skw{to{transform:translateX(100%)}}
+.skwrap{padding:18px;display:flex;flex-direction:column;gap:12px}
+.sk.t{height:14px;width:40%} .sk.h{height:26px;width:62%} .sk.card{height:150px;border-radius:20px} .sk.row{height:62px} .sk.kpi{height:84px;border-radius:16px}
+.skgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px}
+/* Pita koneksi */
+.netbar{position:fixed;left:50%;top:10px;transform:translateX(-50%) translateY(-140%);z-index:10000;background:#0D3B57;color:#fff;font:600 .82rem/1.3 var(--font);padding:8px 14px;border-radius:999px;box-shadow:0 8px 24px rgba(0,0,0,.2);display:flex;gap:8px;align-items:center;transition:transform .25s ease;max-width:92vw}
+.netbar.on{transform:translateX(-50%) translateY(0)}
+.netbar.ok{background:#137148}
+.netbar i{width:8px;height:8px;border-radius:50%;background:#FFC24B;flex:none}
+.netbar.ok i{background:#8EE3B5}
+/* Indikator sinkron kecil (data sedang diperbarui di latar belakang) */
+.syncdot{position:fixed;right:12px;top:12px;width:10px;height:10px;border-radius:50%;background:var(--teal);opacity:0;z-index:9000;transition:opacity .2s;box-shadow:0 0 0 0 rgba(14,156,154,.5)}
+.syncdot.on{opacity:.85;animation:pulse 1.2s infinite}
+@keyframes pulse{70%{box-shadow:0 0 0 10px rgba(14,156,154,0)}100%{box-shadow:0 0 0 0 rgba(14,156,154,0)}}
+/* Umpan balik sentuh langsung */
+button,.btn,.rw,[data-tab],a.rw,tr.clk,.kpi{touch-action:manipulation}
+.rw:active,.kpi:active,[data-tab]:active{transform:scale(.985)}
+:focus-visible{outline:3px solid rgba(14,156,154,.5);outline-offset:2px}
+/* Kurangi gerak bila pengguna memilih demikian */
+@media (prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
+.fade-in{animation-duration:.18s}
+.toast{width:max-content;max-width:min(92vw,460px);bottom:calc(88px + env(safe-area-inset-bottom));cursor:pointer}
+@media (min-width:1024px){.toast{bottom:28px}}
