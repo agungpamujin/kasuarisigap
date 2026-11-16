@@ -1,4 +1,4 @@
-# Panduan Instalasi KASUARI SIGAP v4.1.0
+# Panduan Instalasi KASUARI SIGAP v4.1.1
 ## Backend di Google Apps Script + Tampilan di GitHub Pages
 
 Mulai versi 4.0, aplikasi dipisah menjadi dua bagian:
@@ -39,7 +39,7 @@ Kalau yang muncul halaman aplikasi lama atau halaman login Google, ulangi langka
 
 ## BAGIAN B — Isi alamat server di frontend
 
-1. Ekstrak `kasuari-sigap-pages-v4.1.0.zip` ke folder baru, misalnya `Documents\kasuari-sigap`.
+1. Ekstrak `kasuari-sigap-pages-v4.1.1.zip` ke folder baru, misalnya `Documents\kasuari-sigap`.
 2. Buka `js\config.js` dengan Notepad.
 3. Ganti `https://script.google.com/macros/s/GANTI_DENGAN_ID_PENERAPAN/exec` dengan URL `/exec` dari langkah A6.
 4. Simpan.
@@ -86,7 +86,7 @@ Baris yang harus terlihat: `index.html`, `nurse.html`, `css`, `js`, `README.md`,
 ```
 git init
 git add .
-git commit -m "KASUARI SIGAP v4.1.0"
+git commit -m "KASUARI SIGAP v4.1.1"
 git branch -M main
 git remote add origin https://github.com/USERNAME/kasuari-sigap.git
 git push -u origin main

@@ -120,9 +120,9 @@ function start(){
   if (BOOT.home && S.token){ var bh = withStatic(BOOT.home); if (bh) setHome(bh); }            /* data segar dari server (ikut halaman) */
   else if (S.token){ var ch = cachedHome(); if (ch){ S.home = ch; S.homeAt = 0; } refreshHome(true); } /* tampilkan data terakhir, perbarui diam-diam */
   var info = BOOT.info || KS.get('ks_info');
-  if (info){ S.info = info; KS.set('ks_info', info); restoreOrLanding(); setTimeout(function(){ eduPhotos(); eduInfo(); }, 1200); if (!BOOT.info) call('pPublicInfo').then(function(i){ S.info = i; KS.set('ks_info', i); }).catch(function(){}); return; }
+  if (info){ S.info = info; KS.set('ks_info', info); restoreOrLanding(); setTimeout(function(){ eduPhotos(); eduInfo(); libLoad(); }, 1200); if (!BOOT.info) call('pPublicInfo').then(function(i){ S.info = i; KS.set('ks_info', i); }).catch(function(){}); return; }
   view(KS.skel());
-  call('pPublicInfo').then(function(i){ S.info = i; KS.set('ks_info', i); restoreOrLanding(); /* tab baru: halaman awal; refresh: halaman terakhir */ })
+  call('pPublicInfo').then(function(i){ S.info = i; KS.set('ks_info', i); restoreOrLanding(); /* tab baru: halaman awal; refresh: halaman terakhir */ setTimeout(function(){ eduPhotos(); eduInfo(); libLoad(); }, 1200); })
     .catch(function(e){ view('<div class="scr"><div class="alert danger">' + icon('alert') + '<div>Aplikasi tidak dapat dimuat: ' + esc(e.message) + '</div></div><button class="btn block" onclick="location.reload()">Coba lagi</button></div>'); });
 }
 
@@ -761,8 +761,8 @@ var EDU_PH_P = null;
 function eduPhotos(){
   if (window.EDU_PHOTOS) return Promise.resolve(window.EDU_PHOTOS);
   if (EDU_PH_P) return EDU_PH_P;
-  try { var c = sessionStorage.getItem('ks_eduph'); if (c){ window.EDU_PHOTOS = JSON.parse(c); return Promise.resolve(window.EDU_PHOTOS); } } catch (e) {}
-  EDU_PH_P = call('pEduPhotos').then(function(a){ window.EDU_PHOTOS = Array.isArray(a) ? a : []; try { sessionStorage.setItem('ks_eduph', JSON.stringify(window.EDU_PHOTOS)); } catch (e) {} return window.EDU_PHOTOS; })
+  try { var c = localStorage.getItem('ks_eduph'); if (c){ window.EDU_PHOTOS = JSON.parse(c); return Promise.resolve(window.EDU_PHOTOS); } } catch (e) {}
+  EDU_PH_P = call('pEduPhotos').then(function(a){ window.EDU_PHOTOS = Array.isArray(a) ? a : []; try { localStorage.setItem('ks_eduph', JSON.stringify(window.EDU_PHOTOS)); } catch (e) {} return window.EDU_PHOTOS; })
     .catch(function(){ EDU_PH_P = null; return []; });
   return EDU_PH_P;
 }
@@ -776,7 +776,7 @@ function eduInfo(){
     .catch(function(){ EDU_INFO_P = null; return {}; });
   return EDU_INFO_P;
 }
-function infImg(src, alt){ return '<button type="button" class="infimg" aria-label="Perbesar gambar: ' + esc(alt) + '"><img src="' + src + '" alt="' + esc(alt) + '" loading="lazy"></button><p class="infhint">' + icon('search','sm') + ' Ketuk gambar untuk memperbesar</p>'; }
+function infImg(src, alt){ var wh = window.EDU_IMG_WH && EDU_IMG_WH[src]; return '<button type="button" class="infimg" aria-label="Perbesar gambar: ' + esc(alt) + '"><img src="' + src + '" alt="' + esc(alt) + '"' + (wh ? ' width="' + wh[0] + '" height="' + wh[1] + '" style="height:auto"' : '') + ' decoding="async"></button><p class="infhint">' + icon('search','sm') + ' Ketuk gambar untuk memperbesar</p>'; }
 function showEduPage(mode, msg, anchor){
   var seq = S.eduSeq = (S.eduSeq || 0) + 1;
   var rer = function(){ if (S.eduSeq === seq && app.querySelector('.edu-page')) KS.keepScroll(function(){ showEduPage(mode, msg); }); };
@@ -856,13 +856,13 @@ function showEduHome(){
 }
 /* ===== v4.1.0 · PUSTAKA KESEHATAN RS KARIADI (edukasi umum, terpisah dari edukasi kemoterapi) ===== */
 function eduSwitch(on1){ return '<div class="seg eswitch" role="tablist" style="margin:8px 0 12px"><button id="swKemo" role="tab" aria-selected="' + (on1 === 'kemo') + '" class="' + (on1 === 'kemo' ? 'on' : '') + '">Edukasi Kemoterapi</button><button id="swLib" role="tab" aria-selected="' + (on1 === 'lib') + '" class="' + (on1 === 'lib' ? 'on' : '') + '">Pustaka Kesehatan</button></div>'; }
-var LIB = null, LIB_P = null;
+var LIB = null, LIB_P = null, LIB_CHG = false;
 function libLoad(force){
   if (!LIB && !force) { try { var c = JSON.parse(localStorage.getItem('ks_lib') || 'null'); if (c && c.cats && c.cats.length) LIB = c; } catch (e) {} }
   if (LIB_P && !force) return LIB_P;
   LIB_P = call('pEduLibrary').then(function(o){
-    if (o && o.cats && o.cats.length) { LIB = o; try { localStorage.setItem('ks_lib', JSON.stringify(o)); } catch (e) {} }
-    else if (!LIB) LIB = o || { cats: [] };
+    if (o && o.cats && o.cats.length) { var j = JSON.stringify(o.cats); LIB_CHG = !LIB || JSON.stringify(LIB.cats) !== j; LIB = o; try { localStorage.setItem('ks_lib', JSON.stringify(o)); } catch (e) {} }
+    else if (!LIB) { LIB = o || { cats: [] }; LIB_CHG = true; }
     return LIB;
   }, function(e){ LIB_P = null; if (!LIB) LIB = { cats: [], error: 'Pustaka belum dapat dibuka. Periksa internet lalu coba lagi.' }; return LIB; });
   return LIB_P;
@@ -901,8 +901,10 @@ function showLibHome(q){
     cats.forEach(function(c){ c.files.forEach(function(f){ var h = (f.t + ' ' + f.s + ' ' + c.title + ' ' + f.c).toLowerCase(); if (ws.every(function(r){ return r.test(h); })) hits.push(libItem(f, c.title)); }); });
     el.innerHTML = hits.length ? '<div class="small muted" style="margin:4px 2px 8px">' + hits.length + ' materi ditemukan</div><div class="rows">' + hits.slice(0, 80).join('') + '</div>' : '<div class="note">Tidak ditemukan materi untuk “' + esc(qq) + '”. Coba kata lain atau buka per kategori.</div>';
   }
+  libLoad(); /* ambil cache lokal (localStorage) bila ada → tampil seketika */
   paint();
-  if (!LIB_P || !LIB) libLoad().then(function(){ var x = document.getElementById('lbQ'); if (document.querySelector('.lbhero') && !(x && x.value)) paint(); });
+  LIB_CHG = false;
+  libLoad().then(function(){ var x = document.getElementById('lbQ'); if (LIB_CHG && document.querySelector('.lbhero') && !document.querySelector('.lbcat.open') && !(x && x.value)) paint(); LIB_CHG = false; });
 }
 function showLibCat(i){
   var c = LIB && LIB.cats && LIB.cats[i]; if (!c) return showLibHome();
