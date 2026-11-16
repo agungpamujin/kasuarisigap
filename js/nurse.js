@@ -519,10 +519,38 @@ function paintSettings(s){
       s.config.map(function(x){ return '<tr><td class="b small">' + esc(x.key) + '<div class="tiny muted" style="font-weight:500">' + esc(x.desc) + '</div></td><td class="small" style="max-width:380px;word-break:break-word">' + esc(x.value) + '</td></tr>'; }).join('') + '</tbody></table></div></div>' +
       '<div class="panel"><h3>' + icon('user','sm') + 'Akun Saya</h3><div class="kv"><div>Nama</div><div class="b">' + esc(N.user.name) + '</div><div>Peran</div><div>' + esc(N.user.role) + '</div><div>Versi aplikasi</div><div>v' + esc(s.version) + '</div></div>' +
       '<button class="btn soft block" id="bPw" style="margin-top:14px">' + icon('key','sm') + ' Ganti password</button>' +
+      (s.ai ? aiKeyPanel(s.ai) : '') +
       (s.isAdmin ? '<h3 style="margin-top:22px">' + icon('users','sm') + 'Pengguna</h3>' + s.users.map(function(u){ return '<div class="row" style="padding:8px 0;border-bottom:1px solid var(--line-2);flex-wrap:nowrap"><div class="who grow"><b>' + esc(u.name) + '</b><span>' + esc(u.username) + ' · ' + esc(u.role) + (u.lastLogin ? ' · login ' + esc(fmtDT(u.lastLogin)) : '') + '</span></div><span class="badge ' + (u.active ? 'b-MONITOR' : 'b-GREY') + '">' + (u.active ? 'Aktif' : 'Nonaktif') + '</span></div>'; }).join('') +
         '<p class="tiny muted" style="margin-top:10px">Tambah/reset pengguna: Spreadsheet → menu 🩺 KASUARI SIGAP → Tambah / reset password pengguna.</p>' : '') + '</div></div></div>';
     $('bPw').onclick = function(){ showChangePw(false); };
+    if (s.ai) bindAiKey();
   })();
+}
+/* v4.0.1 · API key Gemini ditempel dari dashboard (disimpan aman di Script Properties, tidak pernah ditampilkan ulang) */
+function aiKeyPanel(a){
+  var st = a.hasKey ? '<span class="badge b-MONITOR">Terpasang · …' + esc(a.tail) + '</span>' : '<span class="badge b-PRIORITY">Belum ada key</span>';
+  return '<h3 style="margin-top:22px">' + icon('key','sm') + 'API key Gemini (Chat Ners.AI)</h3>' +
+    '<div class="row" style="margin:4px 0 6px">' + st + '<span class="badge ' + (a.chatOn ? 'b-TEAL' : 'b-GREY') + '">Chat AI ' + (a.chatOn ? 'aktif' : 'mode terpandu') + '</span></div>' +
+    (a.updatedAt ? '<div class="tiny muted">Terakhir diganti ' + esc(fmtDT(a.updatedAt)) + (a.updatedBy ? ' oleh ' + esc(a.updatedBy) : '') + '</div>' : '') +
+    (a.lastError ? '<div class="tiny" style="color:var(--bad-700);margin-top:4px">Error AI terakhir: ' + esc(a.lastError) + '</div>' : '') +
+    '<label class="lbl" for="aiKey">Tempel API key baru</label><input type="password" id="aiKey" autocomplete="off" spellcheck="false" placeholder="AIza…" style="font-family:monospace">' +
+    '<label class="lbl" for="aiPw">Password akun Anda (konfirmasi)</label><input type="password" id="aiPw" autocomplete="current-password">' +
+    '<label class="row small" style="margin-top:10px;gap:8px;cursor:pointer"><input type="checkbox" id="aiOn" checked style="width:auto"> Aktifkan Chat Ners.AI dengan AI</label>' +
+    '<button class="btn block" id="bAiKey" style="margin-top:10px">' + icon('check','sm') + ' Simpan &amp; uji koneksi</button>' +
+    '<p class="tiny muted" style="margin-top:8px">Key diuji ke Google sebelum dipakai. Bila ditolak, key lama tetap berlaku. Key disimpan di Script Properties – tidak tampil di Sheet maupun di layar ini.</p>';
+}
+function bindAiKey(){
+  $('bAiKey').onclick = function(){
+    var k = $('aiKey').value.trim(), pw = $('aiPw').value, b = this;
+    if (!k) return toast('Tempel API key terlebih dahulu.', true);
+    if (!pw) return toast('Isi password akun Anda untuk konfirmasi.', true);
+    b.disabled = true; b.innerHTML = '<div class="spinner"></div> Menguji…';
+    call('nSetGeminiKey', N.sess, k, pw, $('aiOn').checked).then(function(r){
+      $('aiKey').value = ''; $('aiPw').value = '';
+      toast(r.ok ? 'API key tersimpan ✓ – Gemini menjawab "' + r.reply + '"' : r.warn, !r.ok);
+      if (N.pcache.settings){ N.pcache.settings.ai = r.ai; paintSettings(N.pcache.settings); }
+    }).catch(function(e){ b.disabled = false; b.innerHTML = icon('check','sm') + ' Simpan &amp; uji koneksi'; $('aiPw').value = ''; toast(e.message, true); });
+  };
 }
 
 /* ================= DETAIL LAPORAN ================= */
@@ -595,7 +623,7 @@ function renderDetail(d){
           '<div class="kv"><div>Tgl lahir</div><div>' + esc(fmtD(p.dob)) + (p.age !== '' ? ' (' + p.age + ' th)' : '') + '</div><div>Kemo terakhir</div><div>' + esc(fmtD(p.chemoDate)) + srcB(d.ctx && d.ctx.chemo.src) + '</div><div>Obat</div><div>' + esc(drugs) + srcB(d.ctx && d.ctx.drugs.src) + (d.ctx && d.ctx.drugs.status === 'PERLU_KONFIRMASI' ? ' <span class="badge b-REVIEW">belum dikonfirmasi untuk kemo ' + esc(fmtD(p.chemoDate)) + '</span>' : '') + '</div><div>Akses</div><div>' + esc([p.accessType, p.accessSite].filter(Boolean).join(' – ')) + srcB(d.ctx && d.ctx.access.src) + '</div>' +
           (d.event && (d.event.site || d.event.chemo || d.event.session) ? '<div>Saat laporan ini</div><div>' + esc(['area: ' + (d.event.site || 'tidak disebut') + (d.event.point ? ' (' + d.event.point + ')' : '') + (d.event.scope ? ' – ' + d.event.scope : ''), d.event.session ? d.event.session : (d.event.chemo ? 'kemo ' + fmtD(d.event.chemo) : ''), d.event.drugs ? 'obat: ' + d.event.drugs.replace(/ \[(PERAWAT|PASIEN)\]$/, '') : '', d.event.unsure ? 'pasien tidak yakin info kemo terbarunya' : ''].filter(Boolean).join(' · ')) + '</div>' : '') +
           '<div>HP pasien</div><div>' + esc(p.phone || '–') + '</div><div>Keluarga</div><div>' + (esc(p.caregiverName) || '–') + ' ' + esc(p.caregiverPhone) + '</div></div></div>' +
-        '<div class="dtab hidden" data-tp="chat">' + (d.chat.length ? '<div class="chatlog">' + d.chat.map(function(c){ return '<div class="cl ' + esc(c.role) + (c.red ? ' red' : '') + '"><span class="tiny muted">' + esc(fmtDT(c.time)) + ' · ' + (c.role === 'user' ? 'Pasien' : 'NURSE.AI') + '</span><div>' + esc(c.text).replace(/\n/g, '<br>') + '</div></div>'; }).join('') + '</div>' : '<p class="small muted">Belum ada percakapan.</p>') + '</div>' +
+        '<div class="dtab hidden" data-tp="chat">' + (d.chat.length ? '<div class="chatlog">' + d.chat.map(function(c){ return '<div class="cl ' + esc(c.role) + (c.red ? ' red' : '') + '"><span class="tiny muted">' + esc(fmtDT(c.time)) + ' · ' + (c.role === 'user' ? 'Pasien' : 'Chat Ners.AI') + '</span><div>' + esc(c.text).replace(/\n/g, '<br>') + '</div></div>'; }).join('') + '</div>' : '<p class="small muted">Belum ada percakapan.</p>') + '</div>' +
         '<div class="dtab hidden" data-tp="care">' + (d.care ? '<div class="carebox t-' + esc(d.care.thermal) + '"><b>' + esc(d.care.content ? d.care.content.title : d.care.code) + '</b><div class="tiny">' + esc(d.care.reason) + '</div></div>' + (d.care.content && d.care.content.actions ? '<ol class="small" style="margin:10px 0 0;padding-left:18px">' + d.care.content.actions.map(function(a){ return '<li>' + esc(a) + '</li>'; }).join('') + '</ol>' : '') : '<p class="small muted">Tidak ada instruksi kompres (tidak ada perubahan / status aman).</p>') +
           (d.aiCare ? '<div class="lbl3" style="margin-top:14px">SARAN AI YANG DITERIMA PASIEN</div><div class="md small" style="max-height:340px;overflow:auto;background:#F7FAFB;border:1px solid var(--line);border-radius:12px;padding:10px 12px">' + mdLite(d.aiCare.text) + refsHtml(d.aiCare.sources) + '</div>' : '') + '</div>' +
         '<div class="dtab hidden" data-tp="drug">' + (d.drugInfo.length ? '<div class="tablebox" style="max-height:none"><table><thead><tr><th>Obat</th><th>Tipe</th><th>Kompres</th><th>Antidot / catatan</th></tr></thead><tbody>' +
@@ -742,7 +770,7 @@ function showCard(pid){
       '<div style="font-size:1.15rem;font-weight:800;color:var(--navy)">' + esc(c.name) + '</div><div class="tiny muted">Kemoterapi ' + esc(fmtD(c.chemoDate)) + ' · pantau s.d. ' + esc(fmtD(c.monitoringEnd)) + '</div>' +
       '<div class="small" style="text-align:left;margin-top:12px;background:#F4F8FA;border-radius:10px;padding:10px"><b>Jadwal cek:</b><br>' + c.tasks.map(function(t){ return esc(fmtD(t.date)) + ' · ' + esc(t.start) + '–' + esc(t.end); }).join('<br>') + '</div>' +
       '<div class="tiny" style="text-align:left;margin-top:10px">Pindai QR untuk langsung masuk. Bisa juga membuka aplikasi lalu masuk dengan <b>nama, No. RM, dan tanggal lahir</b>.</div>' +
-      '<div class="small b" style="margin-top:10px;color:var(--bad-700)">Darurat: Ruangan ' + esc(i.unitPhone) + ' · ' + esc(i.igdName) + ' ' + esc(i.igdPhone) + '</div><div class="tiny muted" style="margin-top:4px">Aplikasi ini bukan layanan gawat darurat.</div></div></div>' +
+      '<div class="small b" style="margin-top:10px;color:var(--bad-700)">Darurat: ' + esc(i.igdName) + ' ' + esc(i.igdPhone) + '</div><div class="tiny muted" style="margin-top:4px">Aplikasi ini bukan layanan gawat darurat.</div></div></div>' +
       '<div class="row no-print" style="margin-top:16px;justify-content:center"><button class="btn" id="bPrint">' + icon('printer','sm') + ' Cetak</button>' +
       (c.wa ? '<a class="btn ghost" target="_blank" href="' + esc(c.wa) + '">' + icon('message','sm') + ' Kirim via WhatsApp</a>' : '') + '<button class="btn ghost" id="bCopy">' + icon('file','sm') + ' Salin tautan</button></div>' +
       '<p class="tiny muted no-print center">QR/tautan ini langsung membuka data pasien tersebut. Jangan dibagikan ke grup.</p>');
@@ -778,7 +806,7 @@ function showPoster(){
       '<p style="font-style:italic;color:var(--ink-2);margin:10px 0 4px">“Kenali Lebih Awal, Tangani Lebih Cepat.”</p>' +
       '<div class="b" style="margin-top:10px;color:var(--navy)">Pantau bekas infus kemoterapi Anda dari rumah</div><div id="qrBox"></div>' +
       '<div style="text-align:left;background:#F4F8FA;border-radius:12px;padding:12px 14px;font-size:.92rem"><b>1.</b> Pindai QR ini dengan kamera HP<br><b>2.</b> Masuk dengan <b>nama, No. RM, dan tanggal lahir</b><br><b>3.</b> Belum terdaftar? Tekan <b>Daftar Sekarang</b><br><b>4.</b> Lakukan cek mandiri sesuai jadwal & kirim foto bila ada perubahan</div>' +
-      '<div class="small b" style="margin-top:12px;color:var(--bad-700)">Bila kondisi memberat: Ruangan ' + esc(i.unitPhone) + ' · ' + esc(i.igdName) + ' ' + esc(i.igdPhone) + '</div>' +
+      '<div class="small b" style="margin-top:12px;color:var(--bad-700)">Bila kondisi memberat: ' + esc(i.igdName) + ' ' + esc(i.igdPhone) + '</div>' +
       '<div class="tiny muted" style="margin-top:6px">' + esc(i.unitName) + ' · ' + esc(i.hospital) + '<br>Aplikasi ini bukan layanan gawat darurat.</div></div></div>' +
       '<div class="row no-print" style="margin-top:16px;justify-content:center"><button class="btn" id="bPrint">' + icon('printer','sm') + ' Cetak Poster</button></div>', true);
     var qb = $('qrBox');

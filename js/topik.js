@@ -331,7 +331,7 @@ function showTopic(id, back){
     tpGallery(photos) + extra +
     (t.call && t.call.length ? '<div class="tp-call"><div class="t">' + icon('phone', 'sm') + 'Kapan hubungi perawat</div><ul>' + t.call.map(function(x){ return '<li>' + esc(x) + '</li>'; }).join('') + '</ul></div>' : '') +
     (t.igd && t.igd.length ? '<div class="tp-igd"><div class="t">' + icon('alert', 'sm') + 'Langsung ke IGD bila</div><ul>' + t.igd.map(function(x){ return '<li>' + esc(x) + '</li>'; }).join('') + '</ul></div>' : '') +
-    '<div class="tp-sec"><h3>' + icon('phone', 'sm') + 'Hubungi</h3>' + callButtons() + '<button class="btn soft block" id="tpAsk" style="margin-top:10px">' + icon('ai', 'sm') + ' Tanya NURSE.AI</button></div>' +
+    '<div class="tp-sec"><h3>' + icon('phone', 'sm') + 'Hubungi</h3>' + callButtons() + '<button class="btn soft block" id="tpAsk" style="margin-top:10px">' + icon('ai', 'sm') + ' Tanya Chat Ners.AI</button></div>' +
     '<p class="tp-foot">Informasi umum ini tidak menggantikan penjelasan dokter/perawat Anda.</p></div></div></div>');
   on('bBack', back);
   on('tpAsk', function(){ showChat(function(){ showTopic(id, back); }); });

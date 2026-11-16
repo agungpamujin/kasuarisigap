@@ -1,5 +1,5 @@
 /* =====================================================================
-   KASUARI SIGAP v4.0.0 – penghubung frontend (GitHub Pages) ↔ API Apps Script
+   KASUARI SIGAP v4.1.0 – penghubung frontend (GitHub Pages) ↔ API Apps Script
    - Semua panggilan: POST text/plain {fn, args} → {ok, data | error}
      (text/plain wajib: Apps Script tidak melayani CORS preflight)
    - Tidak menyimpan apa pun; token pasien / sesi perawat tetap dikelola aplikasi.

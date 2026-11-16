@@ -278,6 +278,14 @@ body{background:radial-gradient(120% 60% at 50% 0%,#E3F4F3 0%,#F3F7FA 55%)}
     .seg{display:grid;grid-template-columns:1fr 1fr;background:#E9F0F4;border-radius:12px;padding:4px;gap:4px}
     .seg button{border:0;border-radius:9px;padding:9px;font-weight:700;background:none;color:var(--ink-2);cursor:pointer;font-size:.88rem}
     .seg button.on{background:#fff;color:var(--navy);box-shadow:var(--sh-1)}
+    .eswitch{max-width:560px} .eswitch button{font-size:.86rem}
+    .lbhero{display:flex;flex-direction:column;gap:3px;padding:14px 16px;border-radius:16px;background:linear-gradient(135deg,#E6F4F1,#E3F0FB);margin-bottom:12px} .lbhero b{color:var(--navy);font-size:1.05rem} .lbhero span{color:var(--ink-2);font-size:.88rem;line-height:1.45}
+    .lbhero.sm{flex-direction:row;align-items:center;gap:12px} .lbhero.sm .em{font-size:1.8rem} .lbhero.sm span span{display:block}
+    .lbsrch{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:0 12px;margin-bottom:10px;color:var(--muted)} .lbsrch input{border:0;outline:0;flex:1;min-height:46px;font:inherit;font-size:1rem;background:none;color:var(--ink)}
+    .lbgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+    .lbcat{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;background:#fff;border:1px solid var(--line-2);border-radius:14px;padding:14px;cursor:pointer;font-family:inherit;min-height:112px;box-shadow:var(--sh-1)} .lbcat:active{transform:scale(.98)}
+    .lbcat .em{font-size:1.7rem;line-height:1} .lbcat b{color:var(--navy);font-size:.93rem;line-height:1.3} .lbcat .s{color:var(--muted);font-size:.8rem}
+    .rows .lbi .lth{position:relative;width:48px;height:60px;border-radius:8px;background:#EEF3F4;flex:none;overflow:hidden;display:flex;align-items:center;justify-content:center} .rows .lbi .lth i{font-style:normal;font-size:1.3rem} .rows .lbi .lth img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#fff}
     /* Symptoms */
     .chk{display:flex;align-items:center;gap:12px;padding:14px 14px;border:1.5px solid var(--line);background:#fff;border-radius:14px;margin-bottom:9px;cursor:pointer;width:100%;text-align:left;font-size:.98rem;font-weight:600;color:var(--ink)}
     .chk .box{width:24px;height:24px;border-radius:7px;border:2px solid #B8C6D2;display:flex;align-items:center;justify-content:center;flex:none;color:#fff;transition:all .12s}

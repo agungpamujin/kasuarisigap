@@ -47,8 +47,8 @@ function handleErr(e){
 }
 function callButtons(){
   var i = S.info || {};
-  return '<div class="callrow">' + (i.unitPhone ? '<a class="btn navy" href="' + tel(i.unitPhone) + '">' + icon('phone','sm') + ' Ruangan</a>' : '') +
-    (i.igdPhone ? '<a class="btn danger" href="' + tel(i.igdPhone) + '">' + icon('phone','sm') + ' IGD</a>' : '') + '</div>';
+  /* v4.0.1: hanya tombol IGD (tombol Ruangan dihapus) */
+  return '<div class="callrow">' + (i.igdPhone ? '<a class="btn danger" style="flex:1 1 100%;grid-column:1/-1;width:100%" href="' + tel(i.igdPhone) + '">' + icon('phone','sm') + ' Telepon IGD ' + esc(i.igdPhone) + '</a>' : '') + '</div>';
 }
 
 /* ================= v3.0 KILAT: data lokal + pembaruan di latar belakang ================= */
@@ -183,16 +183,20 @@ function dobPicker(id, val){
 function dobVal(id){ var d = $(id + 'D').value, m = $(id + 'M').value, y = $(id + 'Y').value; return d && m && y ? y + '-' + m + '-' + d : ''; }
 function showLogin(msg, pre){
   pre = pre || {};
-  var ph = S.info.rsPhone || S.info.unitPhone;
+  /* v4.0.1: nama & No. RM terakhir yang berhasil masuk di HP ini diisi otomatis (pasien sering lupa No. RM) */
+  var last = KS.get('ks_last_id') || {}, auto = !pre.name && !pre.rm && !!(last.name || last.rm);
+  if (auto) pre = { name: last.name || '', rm: last.rm || '', dob: pre.dob };
   view(topbar('Masuk') + '<div class="scr" style="padding-top:8px">' +
     '<h1 style="margin:0 0 6px">Selamat datang</h1><p class="muted" style="margin:0 0 16px;font-size:1rem;line-height:1.5">Isi 3 data di bawah. Datanya sama seperti yang tertulis di kartu berobat RS Kariadi.</p>' +
     (msg ? '<div class="alert warn">' + icon('info') + '<div>' + esc(msg) + '</div></div>' : '') +
     '<div class="card" style="padding:18px"><label class="lbl" for="lName">Nama lengkap</label><input type="text" id="lName" placeholder="Sesuai kartu berobat" autocomplete="name" value="' + esc(pre.name || '') + '">' +
-    '<label class="lbl" for="lRm">No. Rekam Medis (RM)</label><input type="text" id="lRm" placeholder="Contoh: C123456" autocomplete="off" value="' + esc(pre.rm || '') + '"><div class="tiny muted" style="margin-top:4px">Nomor ini ada di kartu berobat / gelang pasien.</div>' +
+    '<label class="lbl" for="lRm">No. Rekam Medis (RM)</label><input type="text" id="lRm" name="rm" placeholder="Contoh: C123456" autocomplete="on" autocapitalize="characters" value="' + esc(pre.rm || '') + '"><div class="tiny muted" style="margin-top:4px">Nomor ini ada di kartu berobat / gelang pasien.</div>' +
+    (auto ? '<div class="tiny muted" style="margin-top:8px">Nama &amp; No. RM terisi otomatis dari HP ini. <button class="btn link" id="bForget" style="font-size:inherit;padding:0 2px">Bukan Anda? Kosongkan</button></div>' : '') +
     '<label class="lbl">Tanggal lahir</label>' + dobPicker('lDob', pre.dob) + '</div>' +
     '<button class="btn block lg" id="bLogin" style="margin-top:14px">Masuk</button>' +
     (S.info.selfReg ? '<div class="or">atau</div><button class="btn outline block lg" id="bReg">Belum pernah daftar? Daftar di sini</button><p class="center small muted" style="margin:8px 6px 0">Cukup daftar <b style="color:var(--navy)">satu kali</b>. Kemoterapi berikutnya tetap memakai akun yang sama.</p>' : '') +
-    (ph ? '<a class="helpbox" href="' + tel(ph) + '">' + icon('phone') + '<span>Kesulitan masuk? Telepon RS Kariadi<br><b>' + esc(ph) + '</b></span></a>' : '') + '</div>');
+    '<div class="helpbox">' + icon('info') + '<span>Lupa No. RM? Lihat kartu berobat atau gelang pasien, atau <b>tanyakan langsung ke perawat ruangan</b>.</span></div></div>');
+  on('bForget', function(){ KS.set('ks_last_id', null); $('lName').value = ''; $('lRm').value = ''; this.parentNode.remove(); });
   on('bBack', function(){ showLanding(); });
   function cur(){ return { name: $('lName').value.trim(), rm: $('lRm').value.trim(), dob: dobVal('lDob') }; }
   on('bReg', function(){ showRegister(cur()); });
@@ -201,7 +205,7 @@ function showLogin(msg, pre){
     if (!c.name || !c.rm || !c.dob) return toast('Lengkapi nama, No. RM, dan tanggal lahir.', true);
     b.disabled = true; b.innerHTML = '<div class="spinner"></div>';
     call('pLogin', c.name, c.rm, c.dob, staticVer()).then(function(r){
-      if (r.token){ S.token = r.token; store('pw_token', r.token); var hh = withStatic(r.home); if (hh) setHome(hh); else clearLocal(); return loadHome(); }
+      if (r.token){ KS.set('ks_last_id', { name: c.name, rm: c.rm }); S.token = r.token; store('pw_token', r.token); var hh = withStatic(r.home); if (hh) setHome(hh); else clearLocal(); return loadHome(); }
       b.disabled = false; b.textContent = 'Masuk';
       if (r.notRegistered) return r.selfReg ? showRegister(c, 'Data Anda belum terdaftar. Silakan lengkapi pendaftaran di bawah ini.') : showLogin('Data Anda belum terdaftar. Silakan hubungi perawat.', c);
       if (r.ended) return r.selfReg ? showRegister(c, 'Masa pemantauan sebelumnya sudah selesai. Daftar lagi untuk kemoterapi terbaru.') : showLogin('Masa pemantauan Anda sudah selesai. Hubungi perawat bila masih ada keluhan.', c);
@@ -256,7 +260,7 @@ function showRegister(pre, msg){
     if (!f.ACCESS_SITE) return toast('Pilih lokasi bekas infus.', true);
     if (!$('rOk').checked) return toast('Centang “Saya setuju” untuk melanjutkan.', true);
     b.disabled = true; b.innerHTML = '<div class="spinner"></div>';
-    call('pRegister', f, staticVer()).then(function(r){ S.token = r.token; store('pw_token', r.token); var hh = withStatic(r.home); if (hh) setHome(hh); else clearLocal(); toast(r.existing ? 'Data ditemukan, Anda sudah terdaftar.' : 'Pendaftaran berhasil.'); loadHome(); })
+    call('pRegister', f, staticVer()).then(function(r){ KS.set('ks_last_id', { name: f.NAME || '', rm: f.RM_NUMBER || '' }); S.token = r.token; store('pw_token', r.token); var hh = withStatic(r.home); if (hh) setHome(hh); else clearLocal(); toast(r.existing ? 'Data ditemukan, Anda sudah terdaftar.' : 'Pendaftaran berhasil.'); loadHome(); })
       .catch(function(e){ b.disabled = false; b.innerHTML = icon('check','sm') + ' Daftar & Mulai Pemantauan'; toast(e.message, true); });
   });
 }
@@ -373,8 +377,8 @@ function sprErr(im){
   var w = document.createElement('span'); w.innerHTML = icon(im.getAttribute('data-fb') || 'info'); if (im.parentNode) im.parentNode.replaceChild(w.firstChild, im);
 }
 function menuPic(k){ return sprImg('menu', k, 'aipic', { install: 'plus', faq: 'message', call: 'phone' }[k]); }
-function aiPic(sz){ return sprImg('nav', 'chat', 'aipic' + (sz ? ' ' + sz : ''), 'ai'); } /* v3.14.1: ikon robot perawat NURSE.AI di semua tempat */
-var TABS = [['home','home','Beranda'],['history','history','Riwayat'],['chat','ai','NURSE.AI'],['edu','book','Edukasi'],['akun','user','Akun']];
+function aiPic(sz){ return sprImg('nav', 'chat', 'aipic' + (sz ? ' ' + sz : ''), 'ai'); } /* v3.14.1: ikon robot perawat Chat Ners.AI di semua tempat */
+var TABS = [['home','home','Beranda'],['history','history','Riwayat'],['chat','ai','Chat Ners.AI'],['edu','book','Edukasi'],['akun','user','Akun']];
 function unreadCount(){ var h = S.home; if (!h || !h.messages) return 0; return h.messages.filter(function(m){ return !m.readAt; }).length; }
 /* Pop-up "Perawat sudah membalas" – wajib ditandai "Saya sudah membaca" */
 function replyPopup(){
@@ -407,7 +411,7 @@ function igdPopup(){
   var q = h.patient && h.patient.igdAsk; if (!q) return;
   if ((h.messages || []).some(function(m){ return !m.readAt; })) return; // tampil setelah balasan dibaca
   S.igdOpen = true;
-  var i = S.info, igd = i.igdPhone || i.unitPhone;
+  var i = S.info, igd = i.igdPhone;
   var o = document.createElement('div'); o.className = 'rp-ov';
   o.innerHTML = '<div class="rp igdq" role="dialog" aria-modal="true" aria-labelledby="igT"><div class="ico">' + icon('shield','lg') + '</div><h2 id="igT">Apakah ' + esc(sapa()) + ' sudah ke IGD?</h2>' +
     '<p>' + (q.advised ? 'Pada laporan ' + esc(fmtDate(q.time)) + ', perawat menganjurkan ' + esc(sapa()) + ' segera diperiksa di IGD RS Kariadi.' : 'Laporan ' + esc(fmtDate(q.time)) + ' ditandai PRIORITAS. Jawaban ini membantu perawat memastikan ' + esc(sapa()) + ' mendapat penanganan yang tepat.') + '</p>' +
@@ -463,7 +467,7 @@ function replyTxt(){ var hr = Number((S.home && S.home.patient && S.home.patient
 /* =====================================================================
    v3.11 · KONTEKS PERAWATAN SAYA
    Ringkasan data klinis tercatat (akses, kemo terakhir, obat, pemeriksaan terakhir) + sumbernya.
-   Pasien tidak perlu membuka Akun untuk memfoto atau bertanya ke NURSE.AI.
+   Pasien tidak perlu membuka Akun untuk memfoto atau bertanya ke Chat Ners.AI.
    ===================================================================== */
 function ctx(){ return (S.home && S.home.patient && S.home.patient.ctx) || null; }
 function srcTxt(src){ return ''; } /* v3.12.2: data diisi pasien sendiri sudah sah – tanpa label "belum dicek perawat" */
@@ -485,7 +489,7 @@ function ctxCard(){
     '<div class="it"><span>Kemo terakhir</span><div>' + chemo + '</div></div>' +
     '<div class="it"><span>Obat kemo</span><div>' + drug + '</div></div>' +
     '<div class="it"><span>Pemeriksaan terakhir</span><div>' + last + '</div></div>' +
-    '<p class="tiny muted" style="margin:6px 0 0">Info yang diisi sendiri ditandai sampai dicek perawat. Dipakai otomatis saat memfoto dan saat bertanya ke NURSE.AI.</p></div>';
+    '<p class="tiny muted" style="margin:6px 0 0">Info yang diisi sendiri ditandai sampai dicek perawat. Dipakai otomatis saat memfoto dan saat bertanya ke Chat Ners.AI.</p></div>';
 }
 function setCtx(c){ if (c && S.home && S.home.patient){ S.home.patient.ctx = c; saveHome(); } }
 /* v3.12: pertanyaan "baru kemoterapi?" – 3 pilihan, tidak berupa modal berulang */
@@ -507,7 +511,7 @@ function bindAsk(pfx, after){
   on(pfx + 'No', function(){ confirmCtx('NO_NEW_CHEMO', 'Baik, data sesi yang tercatat tetap dipakai.'); after(); });
   on(pfx + 'Unk', function(){ if (S.draft) S.draft.ctxUnsure = true; confirmCtx('UNSURE', 'Tidak apa-apa – Anda tetap bisa melanjutkan. Perawat akan memastikan informasinya.'); after(); });
 }
-/* v3.12.1: data kemo yang belum ada → ditanyakan NURSE.AI di awal chat */
+/* v3.12.1: data kemo yang belum ada → ditanyakan Chat Ners.AI di awal chat */
 function missingCtx(){
   var c = ctx(); if (!c) return ['Obat kemoterapi apa yang diberikan', 'Jenis dan lokasi infus (infus biasa di tangan/lengan, PORT, atau PICC)', 'Tanggal kemoterapi terakhir'];
   var m = [];
@@ -596,10 +600,10 @@ function showHome(){
   }
   var today = h.today[0] || h.next;
   var rows = [];
-  if (gate.waiting) rows.push('<button class="rw" id="qAsk"><span class="ib aib">' + aiPic() + '</span><span class="grow"><b>Tanya NURSE.AI sambil menunggu</b><span class="s">Kompres, nyeri, perawatan kulit</span></span>' + icon('chevron','sm') + '</button>');
+  if (gate.waiting) rows.push('<button class="rw" id="qAsk"><span class="ib aib">' + aiPic() + '</span><span class="grow"><b>Tanya Chat Ners.AI sambil menunggu</b><span class="s">Kompres, nyeri, perawatan kulit</span></span>' + icon('chevron','sm') + '</button>');
   if (msgs.length) rows.push('<button class="rw" id="bMsg"><span class="ib">' + icon('message') + '</span><span class="grow"><b>Pesan dari perawat' + (unread ? '<i class="pill">' + unread + ' baru</i>' : '') + '</b><span class="s">' + esc(msgs[0].message.length > 60 ? msgs[0].message.slice(0, 60) + '…' : msgs[0].message) + '</span></span>' + icon('chevron','sm') + '</button>');
   if (p.genderNeeded) rows.push('<button class="rw" id="bGen"><span class="dotw"></span><span class="grow"><b>Pilih sapaan: Bapak atau Ibu</b><span class="s">Agar sapaan di aplikasi sesuai</span></span>' + icon('chevron','sm') + '</button>');
-  if (!gate.waiting) rows.push('<button class="rw" id="qAsk"><span class="ib aib">' + aiPic() + '</span><span class="grow"><b>Konsultasi NURSE.AI</b><span class="s">Langsung tanya – data perawatan Anda sudah terbaca</span></span>' + icon('chevron','sm') + '</button>');
+  if (!gate.waiting) rows.push('<button class="rw" id="qAsk"><span class="ib aib">' + aiPic() + '</span><span class="grow"><b>Konsultasi Chat Ners.AI</b><span class="s">Langsung tanya – data perawatan Anda sudah terbaca</span></span>' + icon('chevron','sm') + '</button>');
   if (!free && today) rows.push('<button class="rw" id="bSched"><span class="ib">' + icon('clock') + '</span><span class="grow"><b>' + (h.today[0] ? 'Jadwal hari ini' : 'Jadwal berikutnya') + '</b><span class="s">' + esc(fmtDate(today.date)) + ' · ' + esc(today.start + ' – ' + today.end) + '</span></span>' + icon('chevron','sm') + '</button>');
   if (S.info.knowUrl) rows.push('<a class="rw" target="_blank" rel="noopener" href="' + esc(S.info.knowUrl) + '"><img class="k" src="' + ASSET.knowIcon + '" alt="KNOW"><span class="grow"><b>Daftar kontrol berikutnya</b><span class="s">Lewat KNOW RS Kariadi</span></span>' + icon('external','sm') + '</a>');
   tabView('home', '<div class="scr">' + miniHead() +
@@ -654,7 +658,7 @@ function showReportDetail(id, back){
     (r.careCode && S.home.content.care && S.home.content.care[r.careCode] ? careCard((function(c){ return { thermal: { 'CARE-COLD': 'COLD', 'CARE-WARM': 'WARM', 'CARE-NONE': 'NONE' }[r.careCode] || 'NURSE', title: c.title, message: c.message, steps: c.actions, safety: c.safety, drugs: r.careReason && r.careReason.indexOf('Obat: ') === 0 ? [r.careReason.slice(6)] : [] }; })(S.home.content.care[r.careCode]), true) : '') +
     (r.photoId ? '<div class="card"><h4>Foto yang Anda kirim</h4><div class="ph-one" id="phOne"><div class="spinner dark"></div></div></div>' : '') +
     (msgs.length ? msgs.map(function(x){ return '<div class="bubble"><div class="who"><span class="av' + (DRIVE_DEAD.nurse ? '' : ' pic') + '">' + drivePic('nurse', 'usercheck', 'sm') + '</span><b>Pesan perawat</b><span class="tiny muted">' + esc(fmtDT(x.time)) + '</span></div><p>' + esc(x.message) + '</p></div>'; }).join('') : '') +
-    '<button class="btn soft block" id="bRAsk" style="margin-top:12px">' + aiPic('sm') + ' Tanya NURSE.AI tentang pemeriksaan ini</button>' +
+    '<button class="btn soft block" id="bRAsk" style="margin-top:12px">' + aiPic('sm') + ' Tanya Chat Ners.AI tentang pemeriksaan ini</button>' +
     callButtons() + '</div>');
   on('bBack', back || function(){ showHistory(); });
   on('bRAsk', function(){ showChat(function(){ showReportDetail(id, back); }, null, id); });
@@ -686,7 +690,7 @@ function showAccount(){
       '<div class="row" style="margin-top:10px;flex-wrap:nowrap"><button class="btn ghost sm grow" id="aCons">' + icon('shield','sm') + ' Lihat persetujuan</button><button class="btn ghost sm grow" id="aEdu">' + icon('book','sm') + ' Baca edukasi</button></div></div>' +
     '<h3 class="sec">Lainnya</h3><div class="menu-list">' +
       '<button class="mi" id="aHome"><span class="ib aib">' + menuPic('install') + '</span>Pasang di layar utama HP<span class="chev">' + icon('chevron','sm') + '</span></button>' +
-      '<button class="mi" id="aAsk"><span class="ib aib">' + aiPic() + '</span>KASUARI NURSE.AI<span class="chev">' + icon('chevron','sm') + '</span></button>' +
+      '<button class="mi" id="aAsk"><span class="ib aib">' + aiPic() + '</span>Kasuari Ners.AI<span class="chev">' + icon('chevron','sm') + '</span></button>' +
       (S.info.knowUrl ? '<a class="mi" target="_blank" rel="noopener" href="' + esc(S.info.knowUrl) + '"><span class="ib" style="background:none;padding:0"><img class="kicon" src="' + ASSET.knowIcon + '" alt="KNOW"></span>Pendaftaran online (KNOW RS Kariadi)<span class="chev">' + icon('external','sm') + '</span></a>' : '') +
       '<button class="mi" id="aFaq"><span class="ib aib">' + menuPic('faq') + '</span>Tanya-jawab<span class="chev">' + icon('chevron','sm') + '</span></button>' +
       (p.freeMode === false ? '<button class="mi" id="aSched"><span class="ib">' + icon('calendar') + '</span>Jadwal pemantauan<span class="chev">' + icon('chevron','sm') + '</span></button>' : '') +
@@ -838,7 +842,7 @@ function showEduHome(){
     eduTopicRows('A').replace(/(<button class="rw" id="eT_port")/, eduRow('eSkin', 'shield', '', 'Merawat kulit bekas infus', '1 menit') + '$1');
   var C = eduTopicRows('C') + eduRow('eIgd', 'alert', 'red', 'Kapan harus ke IGD', '1 menit');
   var n = 5 + EDU_TOPICS.length;
-  tabView('edu', '<div class="scr"><h1 style="margin:6px 0 4px">Edukasi</h1><p class="muted" style="margin:0 0 14px">' + n + ' bacaan singkat untuk pasien kemoterapi dan keluarga.</p>' +
+  tabView('edu', '<div class="scr"><h1 style="margin:6px 0 4px">Edukasi</h1>' + eduSwitch('kemo') + '<p class="muted" style="margin:0 0 14px">' + n + ' bacaan singkat khusus pasien kemoterapi dan keluarga.</p>' +
     '<div class="etop' + (videoCardHtml('eVideo') ? '' : ' one') + '"><button class="feat" id="eIntro"><span class="tg">MULAI DARI SINI · 1 menit</span><b>Apa itu ekstravasasi?</b><span class="s">Obat kemo yang merembes keluar dari pembuluh darah ke kulit sekitar infus. Makin cepat dikenali, makin mudah ditangani.</span></button>' +
     (videoCardHtml('eVideo') ? '<div class="evid"><div class="grp-h"><i>▶</i>Video</div><div style="margin-top:8px">' + videoCardHtml('eVideo') + '</div></div>' : '') + '</div><div class="egrid">' +
     '<div class="egrp"><div class="grp-h"><i>A</i>' + esc(EDU_GROUPS[0][1]) + '</div><div class="rows">' + A + '</div></div>' +
@@ -848,6 +852,63 @@ function showEduHome(){
   on('eIntro', function(){ showEduPage('review'); }); on('eSigns', function(){ showEduPage('review', '', 'eduSigns'); });
   on('eComp', showCompressInfo); on('eSkin', showSkinCare); on('eIgd', showIgdInfo); on('eFaq', function(){ showFaq(showEduHome); });
   bindEduTopics(showEduHome); on('eVideo', function(){ showVideo(showEduHome); });
+  on('swLib', function(){ showLibHome(); });
+}
+/* ===== v4.1.0 · PUSTAKA KESEHATAN RS KARIADI (edukasi umum, terpisah dari edukasi kemoterapi) ===== */
+function eduSwitch(on1){ return '<div class="seg eswitch" role="tablist" style="margin:8px 0 12px"><button id="swKemo" role="tab" aria-selected="' + (on1 === 'kemo') + '" class="' + (on1 === 'kemo' ? 'on' : '') + '">Edukasi Kemoterapi</button><button id="swLib" role="tab" aria-selected="' + (on1 === 'lib') + '" class="' + (on1 === 'lib' ? 'on' : '') + '">Pustaka Kesehatan</button></div>'; }
+var LIB = null, LIB_P = null;
+function libLoad(force){
+  if (!LIB && !force) { try { var c = JSON.parse(localStorage.getItem('ks_lib') || 'null'); if (c && c.cats && c.cats.length) LIB = c; } catch (e) {} }
+  if (LIB_P && !force) return LIB_P;
+  LIB_P = call('pEduLibrary').then(function(o){
+    if (o && o.cats && o.cats.length) { LIB = o; try { localStorage.setItem('ks_lib', JSON.stringify(o)); } catch (e) {} }
+    else if (!LIB) LIB = o || { cats: [] };
+    return LIB;
+  }, function(e){ LIB_P = null; if (!LIB) LIB = { cats: [], error: 'Pustaka belum dapat dibuka. Periksa internet lalu coba lagi.' }; return LIB; });
+  return LIB_P;
+}
+function libUrl(f){ return 'https://drive.google.com/file/d/' + encodeURIComponent(f.id) + '/view'; }
+function libThumb(f){ return 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(f.id) + '&sz=w240'; }
+var LIB_TYPE = { pdf: 'Leaflet PDF', img: 'Poster', vid: 'Video', doc: 'Dokumen' };
+function libItem(f, showCat){
+  return '<a class="rw lbi" href="' + libUrl(f) + '" target="_blank" rel="noopener"><span class="lth"><img loading="lazy" alt="" src="' + libThumb(f) + '" onerror="this.remove()"><i>' + ({ pdf: '📄', img: '🖼️', vid: '🎬', doc: '📝' }[f.m] || '📄') + '</i></span><span class="grow"><b>' + esc(f.t || 'Materi edukasi') + '</b><span class="s">' + esc([LIB_TYPE[f.m] || 'Materi', showCat || f.s || '', f.c].filter(Boolean).join(' · ')) + '</span></span>' + icon('external','sm') + '</a>';
+}
+function libShell(inner){
+  return '<div class="scr"><h1 style="margin:6px 0 4px">Edukasi</h1>' + eduSwitch('lib') +
+    '<div class="lbhero"><b>Pustaka Kesehatan RS Kariadi</b><span>Leaflet &amp; poster edukasi resmi PKRS RS Kariadi Semarang untuk pasien, keluarga, dan masyarakat umum.</span></div>' + inner +
+    '<p class="small muted" style="margin:14px 2px 0">ℹ️ Materi bersifat umum dan tidak menggantikan anjuran dokter atau perawat Anda. Untuk perawatan setelah kemoterapi, gunakan tab <b>Edukasi Kemoterapi</b>.</p></div>';
+}
+function showLibHome(q){
+  function paint(){
+    var d = LIB || { cats: [] }, cats = d.cats || [], body;
+    if (!LIB) body = '<div class="card" style="text-align:center;padding:26px"><div style="font-size:1.8rem">📚</div><p class="muted" style="margin:6px 0 0">Memuat pustaka…</p></div>';
+    else if (!cats.length) body = '<div class="card"><h4>Pustaka belum tersedia</h4><p class="small muted" style="margin:6px 0 10px">' + esc(d.error || 'Materi edukasi umum sedang disiapkan oleh rumah sakit.') + '</p><button class="btn soft block" id="lbRetry">' + icon('refresh','sm') + ' Coba lagi</button></div>';
+    else body = '<label class="lbsrch">' + icon('search','sm') + '<input id="lbQ" type="search" placeholder="Cari topik, mis. diabetes, ASI, obat…" autocomplete="off" value="' + esc(q || '') + '"></label><div id="lbOut"></div>';
+    tabView('edu', libShell(body));
+    on('swKemo', showEduHome); on('lbRetry', function(){ LIB = null; libLoad(true).then(function(){ showLibHome(); }); showLibHome(); });
+    if (cats.length) { var inp = document.getElementById('lbQ'), t = 0; inp.oninput = function(){ clearTimeout(t); t = setTimeout(function(){ out(inp.value); }, 150); }; out(q || ''); }
+  }
+  function out(qq){
+    var el = document.getElementById('lbOut'); if (!el) return;
+    var k = String(qq || '').trim().toLowerCase(), cats = LIB.cats;
+    if (!k) {
+      el.innerHTML = '<div class="small muted" style="margin:4px 2px 8px">' + cats.length + ' kategori · ' + (LIB.n || cats.reduce(function(a, c){ return a + c.files.length; }, 0)) + ' materi</div><div class="lbgrid">' +
+        cats.map(function(c, i){ return '<button class="lbcat" data-i="' + i + '"><span class="em">' + esc(c.icon || '📘') + '</span><b>' + esc(c.title) + '</b><span class="s">' + c.files.length + ' materi</span></button>'; }).join('') + '</div>';
+      el.querySelectorAll('.lbcat').forEach(function(b){ b.onclick = function(){ showLibCat(+b.getAttribute('data-i')); }; });
+      return;
+    }
+    var hits = [], ws = k.split(/\s+/).map(function(w){ return new RegExp('(^|[^a-z0-9])' + w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')); });
+    cats.forEach(function(c){ c.files.forEach(function(f){ var h = (f.t + ' ' + f.s + ' ' + c.title + ' ' + f.c).toLowerCase(); if (ws.every(function(r){ return r.test(h); })) hits.push(libItem(f, c.title)); }); });
+    el.innerHTML = hits.length ? '<div class="small muted" style="margin:4px 2px 8px">' + hits.length + ' materi ditemukan</div><div class="rows">' + hits.slice(0, 80).join('') + '</div>' : '<div class="note">Tidak ditemukan materi untuk “' + esc(qq) + '”. Coba kata lain atau buka per kategori.</div>';
+  }
+  paint();
+  if (!LIB_P || !LIB) libLoad().then(function(){ var x = document.getElementById('lbQ'); if (document.querySelector('.lbhero') && !(x && x.value)) paint(); });
+}
+function showLibCat(i){
+  var c = LIB && LIB.cats && LIB.cats[i]; if (!c) return showLibHome();
+  view(topbar(c.title) + '<div class="scr"><div class="lbhero sm"><span class="em">' + esc(c.icon || '📘') + '</span><span><b>' + esc(c.title) + '</b><span>' + c.files.length + ' materi · Pustaka Kesehatan RS Kariadi</span></span></div><div class="rows">' + c.files.map(function(f){ return libItem(f); }).join('') +
+    '</div><p class="small muted" style="margin:14px 2px 0">Materi dibuka di Google Drive. Bila tidak terbuka, pastikan internet aktif.</p></div>');
+  on('bBack', function(){ showLibHome(); });
 }
 function showCompressInfo(){
   var care = (S.home.content && S.home.content.care) || {}, drugs = (S.home.account && S.home.account.drugs) || [];
@@ -874,15 +935,14 @@ function showIgdInfo(){
 
 /* Hubungi perawat */
 function showHelp(){
-  var i = S.info, igd = i.igdPhone || i.unitPhone;
+  var i = S.info, igd = i.igdPhone;
   view(topbar('Hubungi') + '<div class="scr">' +
     '<div class="sosc"><div class="k">GAWAT DARURAT</div><p>Lepuh, luka terbuka, nyeri hebat, sesak, atau demam tinggi.</p>' + (igd ? '<a class="b" href="' + tel(igd) + '">' + icon('phone') + ' Telepon ' + esc(igd) + '</a>' : '') + '<small>Atau langsung datang ke IGD RSUP Dr. Kariadi.</small></div>' +
     '<h3 class="sec">Pertanyaan & konsultasi</h3><div class="contacts">' +
-      contactRow('img:nurse', 'Perawat ' + (i.unitName || 'ruangan').split('–')[0].trim(), i.unitPhone, 'tel') +
-      (String(i.rsPhone).replace(/\D/g, '') !== String(i.unitPhone).replace(/\D/g, '') ? contactRow('img:center', 'RSUP Dr. Kariadi (operator)', i.rsPhone, 'tel') : '') +
+      /* v4.0.1: nomor ruangan dihapus; nomor (024) 8413476 = ambulans RS Kariadi */
+      contactRow('phone', 'Ambulans RS Kariadi', i.ambulancePhone, 'tel') +
       contactRow('img:center', 'Contact Center', i.callCenter, 'tel') +
-      contactRow('img:wa', 'WhatsApp layanan pasien', i.csWa, 'wa') +
-      (i.unitWa ? contactRow('img:wa', 'WhatsApp ruangan', i.unitWa, 'wa') : '') +
+      contactRow('img:wa', 'WA Paviljoen Garuda RS Kariadi', i.csWa, 'wa') +
       contactRow('calendar', 'Pendaftaran online · jadwal dokter', 'KNOW RS Kariadi', 'link', '', i.knowUrl) +
     '</div>' +
     '<div class="card" style="margin-top:12px"><div class="row" style="flex-wrap:nowrap;align-items:flex-start">' + icon('info') + '<div class="small"><b style="color:var(--navy)">' + esc(i.hospital) + '</b><br>' + esc(i.rsAddress || i.unitName) + (i.serviceHours ? '<br><span class="muted">Jam pemantauan: ' + esc(i.serviceHours) + '</span>' : '') + '</div></div>' +
@@ -1287,7 +1347,7 @@ function careCard(c, withTimer){
     (c.thermal === 'NURSE' ? '<p>' + esc(c.message) + '</p>' : '') +
     (c.steps && c.steps.length ? '<ol>' + c.steps.map(function(x){ return '<li>' + esc(x) + '</li>'; }).join('') + '</ol>' : '') +
     (withTimer && (c.thermal === 'COLD' || c.thermal === 'WARM') ? '<button class="btn tbtn" id="bTimer">' + icon('clock','sm') + ' Mulai timer 15 menit</button>' : '') +
-    (c.thermal === 'NURSE' && i.unitPhone ? '<a class="btn danger block" style="margin-top:12px" href="' + tel(i.unitPhone) + '">' + icon('phone','sm') + ' Telepon perawat sekarang</a>' : '') +
+
     '</section>';
 }
 var RED_FLAGS = ['Lepuh', 'Luka terbuka / menghitam', 'Nyeri hebat', 'Bengkak cepat meluas', 'Garis merah menjalar', 'Demam ≥ 38 °C', 'Nanah', 'Mati rasa / jari sulit digerakkan'];
@@ -1325,9 +1385,9 @@ function showResult(){
         (r.ai.raised ? '<div class="alert warn" style="margin-top:8px">' + icon('alert') + '<div>Berdasarkan foto, laporan ditandai untuk ditinjau lebih cepat.</div></div>' : '') + '</div></details>' : '') + '</div>' +
     (r.next ? '<div class="nextinfo">' + icon('calendar') + '<div><b>Cek berikutnya:</b> ' + esc(fmtDate(r.next.date)) + ', ' + esc(r.next.start) + '</div></div>'
       : '<div class="nextinfo">' + icon('clock') + '<div><b>Selanjutnya:</b> balasan perawat muncul di Beranda. Laporan baru bisa dikirim setelah perawat membalas.</div></div>') +
-    '<div class="askcta" style="margin-top:14px"><div class="hd"><span class="ib aib">' + aiPic() + '</span><div><b>Masih ada pertanyaan?</b><span>Tanya KASUARI NURSE.AI – jawaban dari pedoman & jurnal</span></div></div>' +
+    '<div class="askcta" style="margin-top:14px"><div class="hd"><span class="ib aib">' + aiPic() + '</span><div><b>Masih ada pertanyaan?</b><span>Tanya Kasuari Ners.AI – jawaban dari pedoman & jurnal</span></div></div>' +
       '<div class="qs">' + ASK.map(function(q, i){ return '<button data-i="' + i + '">' + esc(q) + '</button>'; }).join('') + '</div>' +
-      '<button class="btn block" id="bAsk">' + icon('message','sm') + ' Tanya KASUARI NURSE.AI</button></div>' +
+      '<button class="btn block" id="bAsk">' + icon('message','sm') + ' Tanya Kasuari Ners.AI</button></div>' +
     '<button class="btn ghost block lg" id="bOk" style="margin-top:12px">Selesai, kembali ke Beranda</button>' +
     '<p class="tiny muted center" style="margin:12px 4px 0">Tindakan di atas mengikuti protokol ruangan berdasarkan obat kemoterapi Anda dan bukan diagnosis. Perawat tetap meninjau laporan Anda.</p></div>');
   on('bOk', function(){ /* v3.0: tampil seketika dengan laporan baru, lalu disegarkan dari server */
@@ -1353,7 +1413,7 @@ function loadCareAdvice(reportId){
     .catch(function(){ var b = $('aiCare'); if (b) b.innerHTML = '<p class="small muted" style="margin:0">Belum dapat dimuat. Ikuti langkah di atas dan hubungi perawat bila keluhan memberat.</p>'; });
   function paint(v){
     var b = $('aiCare'); if (!b) return;
-    b.innerHTML = '<div class="tiny muted" style="margin-bottom:6px">' + (v.ai ? 'Disusun KASUARI NURSE.AI dari pedoman & jurnal (ONS, ESMO-EONS, MASCC, Kemenkes)' : 'Panduan perawatan berdasarkan pedoman ONS & ESMO-EONS') + '</div>' +
+    b.innerHTML = '<div class="tiny muted" style="margin-bottom:6px">' + (v.ai ? 'Disusun Kasuari Ners.AI dari pedoman & jurnal (ONS, ESMO-EONS, MASCC, Kemenkes)' : 'Panduan perawatan berdasarkan pedoman ONS & ESMO-EONS') + '</div>' +
       '<div class="md">' + mdLite(v.text) + '</div>' + refsHtml(v.sources) +
       '<div class="foot">Rekomendasi ini bukan diagnosis. Perawat tetap meninjau dan menindaklanjuti laporan Anda.</div>';
   }
@@ -1374,22 +1434,22 @@ function compressTimer(thermal){
   o.querySelector('#tStop').onclick = function(){ clearInterval(iv); o.remove(); };
 }
 
-/* KASUARI NURSE.AI (chatbot) */
+/* Kasuari Ners.AI (chatbot) */
 var CHAT_SUGGEST = ['Obat nyeri yang aman?', 'Kapan harus ke IGD?', 'Daftar kontrol'];
 function chatCtx(){
   var c = ctx(); if (!c) return '';
   var fr = S.chatRep && (S.home.history || []).filter(function(x){ return x.id === S.chatRep; })[0];
-  if (fr) return '<div class="chatctx">NURSE.AI membahas pemeriksaan ' + esc(dShort(fr.time)) + (fr.siteLabel ? ' (' + esc(fr.siteLabel) + ')' : '') + ' beserta data sesi kemoterapinya.</div>';
+  if (fr) return '<div class="chatctx">Chat Ners.AI membahas pemeriksaan ' + esc(dShort(fr.time)) + (fr.siteLabel ? ' (' + esc(fr.siteLabel) + ')' : '') + ' beserta data sesi kemoterapinya.</div>';
   var parts = [];
   if (c.access.type || c.access.site) parts.push([c.access.type, c.access.site].filter(Boolean).join(' – '));
   if (c.chemo.date) parts.push('kemo ' + dShort(c.chemo.date));
   parts.push(c.drugs.status === 'OK' ? 'obat: ' + drugsTxt(c) : c.drugs.status === 'KOSONG' ? 'obat belum diisi' : 'obat sesi ini belum dikonfirmasi');
   if (c.exam.last && c.exam.last.siteLabel) parts.push('pemeriksaan terakhir: ' + c.exam.last.siteLabel);
-  return '<div class="chatctx">NURSE.AI memakai data tercatat: ' + esc(parts.join(' · ')) + '.</div>';
+  return '<div class="chatctx">Chat Ners.AI memakai data tercatat: ' + esc(parts.join(' · ')) + '.</div>';
 }
 function showChat(back, preset, reportId){
   S.chat = S.chat || []; S.chatRep = reportId || null; /* v3.12: chat tentang pemeriksaan tertentu → konteks pemeriksaan itu diutamakan */
-  view(topbar('KASUARI NURSE.AI') + '<h1 class="sr-only">Chat KASUARI NURSE.AI</h1><div class="chat-hd"><span class="bot aib">' + aiPic() + '</span><div class="grow"><b>KASUARI NURSE.AI</b><span class="tiny muted">Asisten Ners AI · jawaban dari pedoman</span></div></div>' +
+  view(topbar('Kasuari Ners.AI') + '<h1 class="sr-only">Chat Kasuari Ners.AI</h1><div class="chat-hd"><span class="bot aib">' + aiPic() + '</span><div class="grow"><b>Kasuari Ners.AI</b><span class="small" style="color:var(--teal-700);font-weight:700;font-style:italic">Your Intelligent Nursing Companion</span><span class="tiny muted">Asisten perawat digital · jawaban dari pedoman dan jurnal terpercaya</span></div></div>' +
     chatCtx() + '<div class="chat" id="chat"></div>' +
     '<div class="chat-in"><div class="in"><div class="chips-s" id="sug"><button class="snap" id="cSnap">' + icon('camera','sm') + ' Foto area infus</button>' + CHAT_SUGGEST.map(function(q){ return '<button>' + esc(q) + '</button>'; }).join('') + '</div>' +
     '<div class="row" style="flex-wrap:nowrap"><input type="text" id="cMsg" placeholder="Tulis pertanyaan…" autocomplete="off" maxlength="600"><button class="btn icon" id="cSend" aria-label="Kirim">' + icon('send','sm') + '</button></div></div></div>');
@@ -1409,7 +1469,7 @@ function showChat(back, preset, reportId){
     box.appendChild(d); window.scrollTo(0, document.body.scrollHeight);
   }
   if (!S.chat.length){ var sp = sapa(), nm = S.home ? S.home.patient.firstName : '';
-    bubble('model', 'Halo, ' + sp + (nm ? ' ' + nm : '') + ' 👋\nSelamat datang di KASUARI SIGAP.\n\nSaya Asisten Ners AI, siap menemani ' + sp + ' memantau area bekas infus setelah kemoterapi.\n\nYuk, kita cek bersama.\nCeritakan apa yang ' + sp + ' rasakan atau tunjukkan perubahan yang terlihat. Saya akan membantu memberikan panduan berdasarkan alur klinis yang tersedia.\n\n💚 Kemoterapi selesai, pemantauan tetap berjalan.');
+    bubble('model', 'Halo, ' + sp + (nm ? ' ' + nm : '') + ' 👋\n\nSaya Kasuari Ners.AI, asisten perawat digital ' + sp + '. Silakan bertanya kapan saja tentang bekas infus, efek samping kemoterapi, atau perawatan di rumah.\n\nCeritakan keluhan ' + sp + ' atau kirim foto area bekas infus. Saya bantu dengan informasi, edukasi, dan panduan dari pedoman serta jurnal terpercaya.\n\n💚 Cerdas Mendampingi, Hangat Melayani.');
     var miss = missingCtx();
     if (miss.length){ var qtxt = 'Agar jawaban saya tepat, boleh ' + sp + ' sampaikan dulu:\n' + miss.map(function(x, i){ return (i + 1) + '. ' + x; }).join('\n') + '\n\nTidak tahu? Tidak apa-apa, jawab saja "tidak tahu" – jangan menebak.';
       S.chat.push({ role: 'model', text: qtxt }); } }
@@ -1420,7 +1480,7 @@ function showChat(back, preset, reportId){
     q = String(q || '').trim(); if (!q) return;
     $('cMsg').value = ''; bubble('user', q); S.chat.push({ role: 'user', text: q });
     var t = document.createElement('div'); t.className = 'msg model typing'; t.innerHTML = '<div class="bb"><i></i><i></i><i></i></div>'; box.appendChild(t); window.scrollTo(0, document.body.scrollHeight);
-    var slow = setTimeout(function(){ if (t.parentNode) { t.innerHTML = '<div class="bb"><span class="small muted">NURSE.AI masih menyiapkan jawaban… Bila darurat, jangan menunggu – telepon ruangan atau IGD.</span></div>'; window.scrollTo(0, document.body.scrollHeight); } }, 12000);
+    var slow = setTimeout(function(){ if (t.parentNode) { t.innerHTML = '<div class="bb"><span class="small muted">Chat Ners.AI masih menyiapkan jawaban… Bila darurat, jangan menunggu – telepon ruangan atau IGD.</span></div>'; window.scrollTo(0, document.body.scrollHeight); } }, 12000);
     call('pChat', S.token, S.chat.slice(-11, -1), q, S.chatRep || '').then(function(r){ clearTimeout(slow); t.remove(); bubble('model', r.reply, r.emergency, r.sources, r.fallback, r.links, r.footer); S.chat.push({ role: 'model', text: r.reply, em: r.emergency, src: r.sources, fb: r.fallback, links: r.links, foot: r.footer }); })
       .catch(function(e){ clearTimeout(slow); t.remove(); bubble('model', e.message); });
   }
